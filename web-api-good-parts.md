@@ -10,3 +10,12 @@
 相対位置の場合、時間の経過とともに取得できる情報が変化する
 また、offset を使うとレコードの先頭から検索が走るのでパフォーマンスが悪い
 絶対位置の場合、where id > 100 のように where を使うので先頭から舐めることはなく、レコード固有の ID を使って絞っているので、時間の経過とともに情報が変化することもない
+
+## 認証
+
+OAuth2.0 の認可フロー(Grant Type)
+
+- Authorization Code -> FaceBook ログインなどのサードパーティアプリケーション向け(サーバーサイド)
+- Implict -> FaceBook ログインなどのサードパーティアプリケーション向け(クライアントサイド)
+- Resource Owner Password Credentials -> 自社サービスの API の認証
+- Client Credentials -> 認可を必要としないアプリ向け
