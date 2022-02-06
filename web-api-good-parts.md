@@ -56,3 +56,72 @@ CORS に対応したブラウザでは状況に応じてプリフライトリク
 
 - パスパラメータに含めるのが一般的
 - クエリパラメータの場合、クエリパラメータが省略された時の挙動を考慮する必要がある
+
+# メディアタイプとセキュリティ
+
+## XSS
+
+JavaScript のコード を含む JSON ファイルの`Content-Type`を誤って`text/html`で配信した場合、コードが実行される場合がある
+
+例
+
+- ユーザーのプロフィールを登録/取得できる API がある
+- プロフィールに任意の JavaScript を仕込み保存する
+- 保存したプロフィールを取得するとプログラムが実行される
+
+```
+GET /users/1/profile
+
+{
+  memo: '<script>console.log('hoge')</script>'
+}
+```
+
+JSON は`application/json`で配信する
+Internet Explorer には `Content Sniffing` というデータの内容からフォーマットを推測する機能がある
+この機能により`Content-Type: application/json`で配信していても、HTML と認識される可能性がある
+IE8 以降は`X-Content-Type-Options: nosniff`とすれば機能を OFF にできる
+IE7 以前は機能を OFF にできないので以下の方法で対策する
+
+- リクエストヘッダの追加
+  JSON のやりとりは URL への直接アクセスや Script の読み込みではなく、XMLHttpRequest を通じて行う。XMLHttpRequest にはヘッダを追加できる。(直接アクセスや Script の読み込みはできない)
+  任意のヘッダが設定されているかをサーバー側で検証することで、XMLHttpRequest の時のみレスポンスを返すようにすることで、Script の実行を回避する
+- エスケープした結果を返すようにする
+
+## JSON ハイジャック
+
+前提
+
+- ユーザー A は ソーシャルメディア facegood を使用している
+- www.facegood.com/meにアクセスするとユーザーAのプロフィールを閲覧できる
+- www.facegood.com/meは以下のような JSON レスポンスを返す
+
+```
+[
+  'age: 21',
+  'name: 'sano''
+  'phoneNumber: '000-0000-0000''
+]
+```
+
+悪意のある開発者が運営するサイト(www.hackyou)には以下のような Script が仕掛けられている
+script タグは同一生成元ポリシーの対象外のため、ユーザー A が hackyou に訪れた際、`'www.facegood.com/me`へリクエストが飛ぶ。
+
+```
+<script src='www.facegood.com/me'>
+```
+
+上記のレスポンスがダウンロードされるのは、ユーザー A のブラウザに限定されるので、悪意のある開発者はレスポンスの結果を取得できない
+JSON ハイジャックを使うと、ダウンロードしたページがレスポンスにアクセスできてしまう
+
+Array オブジェクトのコンストラクタを変更する JSON ハイジャックの例
+
+配列として渡された JSON は JavaScript の構文として読み取れるためページ内で操作が可能だった(バグは解消済み)
+
+### 対策
+
+- JSON を SCRIPT 要素では読み込めないようにする(XSS のヘッダーの追加と同じ対応)
+- JSON のレスポンスをブラウザが必ず JSON と認識するようにする
+  - Content-Type 属性に application/json を指定
+- JSON を JavaScript として実行しないようにする
+  - 配列ではなくオブジェクトを返すようにすれば、仮に Javascript として読み込まれても構文エラーになる
