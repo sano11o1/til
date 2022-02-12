@@ -31,7 +31,34 @@
 - 極力正規化して単一のカラムに切り出す
 
 ## 9章
+- Postgresqlはカラムに独自の型を定義できる
+- ALTERでカラムの型を変更するが、一番強いlock(ACCESS EXCLUSIVE)を取るので、ロック中は他のクエリは実行できない
+- デッドロックとは
 
+  https://medium-company.com/%E3%83%87%E3%83%83%E3%83%89%E3%83%AD%E3%83%83%E3%82%AF/
+
+- MySQLの場合
+
+  https://www.slideshare.net/ichirin2501/ss-44642631
+
+図9.4の自分用メモ
+前提: トランザクションA, Bは同じタイミングで実行される
+```
+トランザクションA
+INISERT INTO child VALUES(1,1)
+UPDATE parent SET count =  count + 1 where id = 1
+
+トランザクションB
+INISERT INTO child VALUES(1,2)
+UPDATE parent SET count =  count + 1 where id = 1
+
+1. トランザクションA: INISERT INTO child VALUES(1,1)でINSERT
+2. トランザクションB: INISERT INTO child VALUES(1,2)で親にロックがかかる
+3. トランザクションA: 2で親にロックがかかっているため、UPDATEが待ちの状態になる
+4. 親にロックがかかっているためトランザクションBでもUPDATEが待ちの状態になる
+-> A,Bの両方で処理が止まってしまう(Deadlock!!)
+```
+- ビジネスロジックはアプリケーション側に持たせる
 ## 10章
 
 ## 11章
